@@ -44,8 +44,14 @@ $input = file_get_contents('php://input');
 $update = json_decode($input, true);
 
 if (!$update) {
-    http_response_code(400);
-    die('Invalid JSON');
+    // Log but avoid retry storms
+    error_log('Webhook received invalid JSON or empty payload');
+    if (function_exists('error_notify_admin')) {
+        error_notify_admin('webhook_invalid_json', 'Invalid JSON or empty payload', substr($input, 0, 200));
+    }
+    http_response_code(200);
+    echo 'ok';
+    exit;
 }
 
 // لاگ برای دیباگ (فقط در حالت توسعه)
