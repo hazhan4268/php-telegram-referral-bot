@@ -93,6 +93,23 @@ if [ -f "config.php.backup" ]; then
 fi
 echo ""
 
+# افزایش شماره بیلد محلی پس از آپدیت موفق
+echo -e "${YELLOW}🏷️  افزایش شماره Build...${NC}"
+BUILD_FILE="BUILD"
+if [ -f "$BUILD_FILE" ]; then
+    BUILD=$(cat "$BUILD_FILE" 2>/dev/null | tr -d '\r')
+    if [[ "$BUILD" =~ ^[0-9]+$ ]]; then
+        BUILD=$((BUILD+1))
+    else
+        BUILD=1
+    fi
+else
+    BUILD=1
+fi
+echo -n "$BUILD" > "$BUILD_FILE"
+echo -e "${GREEN}✓ Build = ${BUILD}${NC}"
+echo ""
+
 # تنظیم مجوزات
 echo -e "${YELLOW}🔒 تنظیم مجوزات...${NC}"
 chmod -R 755 .

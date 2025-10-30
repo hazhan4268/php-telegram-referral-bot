@@ -91,3 +91,6 @@ phpunit.xml
 
 # Documentation build
 /docs/_build/
+
+# Local build metadata
+BUILD

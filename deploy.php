@@ -80,6 +80,22 @@ foreach ($commands as $command) {
 logMessage('=== Deployment Completed Successfully ===');
 logMessage('');
 
+// Increment build number after successful deployment
+$buildFile = __DIR__ . '/BUILD';
+$prevBuild = 0;
+if (is_file($buildFile)) {
+    $content = @file_get_contents($buildFile);
+    if ($content !== false) {
+        $prevBuild = (int)trim($content);
+    }
+}
+$newBuild = $prevBuild + 1;
+if (@file_put_contents($buildFile, (string)$newBuild) !== false) {
+    logMessage('Build incremented: ' . $prevBuild . ' -> ' . $newBuild);
+} else {
+    logMessage('WARNING: Failed to write BUILD file at ' . $buildFile);
+}
+
 // پاسخ موفقیت‌آمیز
 http_response_code(200);
 echo json_encode([

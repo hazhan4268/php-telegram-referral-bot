@@ -35,7 +35,17 @@ define('CSRF_TOKEN_LENGTH', 32);
 
 // تنظیمات عمومی
 define('TIMEZONE', 'Asia/Tehran');
-define('APP_VERSION', '2.0.0');
+// نسخه برنامه از فایل VERSION و BUILD خوانده می‌شود تا پس از هر آپدیت به‌روز باشد
+if (!function_exists('app_version')) {
+	function app_version() {
+		$base = @file_get_contents(__DIR__ . '/VERSION');
+	$base = $base ? trim($base) : '2.0.1';
+		$build = @file_get_contents(__DIR__ . '/BUILD');
+		$build = $build ? (int)trim($build) : 0;
+		return $build > 0 ? ($base . '+build.' . $build) : $base;
+	}
+}
+define('APP_VERSION', app_version());
 
 // محیط اجرا (development یا production)
 define('ENVIRONMENT', 'production');
