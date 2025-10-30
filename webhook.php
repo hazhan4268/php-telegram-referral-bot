@@ -63,7 +63,9 @@ try {
     } else {
         BotHelper::logError('webhook', $e->getMessage(), substr($input, 0, 500));
     }
-    echo 'error';
+    // Always 200 to prevent Telegram from retry storms; we already logged/notified
+    http_response_code(200);
+    echo 'ok';
 }
 
 /**

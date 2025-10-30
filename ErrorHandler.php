@@ -69,13 +69,33 @@ if (!function_exists('error_notify_admin')) {
         @file_put_contents($logFile, "[{$ts}] [ERROR] {$title} | {$message}\n", FILE_APPEND);
     }
 
-    // Convert PHP errors to exceptions
+    // PHP error handler: notify but don't turn warnings/notices into fatal exceptions
     set_error_handler(function ($severity, $message, $file, $line) {
-        // Respect error_reporting
         if (!(error_reporting() & $severity)) {
-            return false; // let PHP handle
+            return false; // not reporting this level
         }
-        throw new ErrorException($message, 0, $severity, $file, $line);
+        $levelsNotifyOnly = [
+            E_WARNING,
+            E_NOTICE,
+            E_USER_WARNING,
+            E_USER_NOTICE,
+            E_DEPRECATED,
+            E_USER_DEPRECATED,
+            E_STRICT
+        ];
+        $payload = $message . ' @ ' . $file . ':' . $line;
+        if (in_array($severity, $levelsNotifyOnly, true)) {
+            // Notify and continue
+            error_notify_admin('php_warning', $payload);
+            return false; // allow PHP normal handling/logging
+        }
+        if ($severity === E_RECOVERABLE_ERROR || $severity === E_USER_ERROR) {
+            // escalate
+            throw new ErrorException($message, 0, $severity, $file, $line);
+        }
+        // default: notify and allow
+        error_notify_admin('php_error', $payload);
+        return false;
     });
 
     // Handle uncaught exceptions
@@ -91,9 +111,15 @@ if (!function_exists('error_notify_admin')) {
             'code' => $code
         ];
         error_notify_admin($title, $msg, $context);
-        // Let default handler print minimal output for non-CLI
-        http_response_code(500);
-        echo 'Internal Server Error';
+        // Set 500 but avoid injecting text into HTML pages
+        if (php_sapi_name() !== 'cli') {
+            http_response_code(500);
+            if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                // Optional minimal debug output
+                header('Content-Type: text/plain; charset=utf-8');
+                echo 'Exception: ' . $msg;
+            }
+        }
     });
 
     // Fatal errors
