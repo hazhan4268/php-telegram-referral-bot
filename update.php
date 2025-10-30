@@ -22,6 +22,11 @@ if (file_exists(__DIR__ . '/config.php')) {
     }
 }
 
+// Global Error Handler (after config if available)
+if (file_exists(__DIR__ . '/includes/ErrorHandler.php')) {
+    require_once __DIR__ . '/includes/ErrorHandler.php';
+}
+
 // Basic auth check: admin session only
 session_start();
 $authorized = false;
@@ -116,6 +121,9 @@ foreach ($steps as $cmd) {
     $allOutput[] = ['$ ' . $cmd, implode("\n", $out)];
     if ($code !== 0) {
         logMessage('ERROR: command failed (' . $code . ')');
+        if (function_exists('error_notify_admin')) {
+            error_notify_admin('update_failed', 'Update failed at: ' . $cmd, implode("\n", $out));
+        }
         http_response_code(500);
         echo json_encode([
             'success' => false,

@@ -11,6 +11,10 @@ if (!file_exists(__DIR__ . '/config.php')) {
 }
 
 require_once __DIR__ . '/config.php';
+// Global error/exception handler (send errors to admin)
+if (file_exists(__DIR__ . '/includes/ErrorHandler.php')) {
+    require_once __DIR__ . '/includes/ErrorHandler.php';
+}
 
 // Initialize database and helpers with error handling
 try {
@@ -19,6 +23,9 @@ try {
     $db = Database::getInstance();
 } catch (Exception $e) {
     error_log("Webhook initialization error: " . $e->getMessage());
+    if (function_exists('error_notify_admin')) {
+        error_notify_admin('webhook_boot', $e->getMessage());
+    }
     http_response_code(500);
     die(json_encode(['error' => 'Bot initialization failed']));
 }
@@ -51,7 +58,11 @@ try {
     echo 'ok';
 } catch (Exception $e) {
     error_log("Webhook error: " . $e->getMessage());
-    BotHelper::logError('webhook', $e->getMessage(), substr($input, 0, 500));
+    if (function_exists('error_notify_admin')) {
+        error_notify_admin('webhook', $e->getMessage(), substr($input, 0, 500));
+    } else {
+        BotHelper::logError('webhook', $e->getMessage(), substr($input, 0, 500));
+    }
     echo 'error';
 }
 

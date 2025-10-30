@@ -678,6 +678,12 @@
     </style>
 </head>
 <body>
+<?php
+// Load global error handler early (won't send to Telegram until config exists)
+if (file_exists(__DIR__ . '/includes/ErrorHandler.php')) {
+    require_once __DIR__ . '/includes/ErrorHandler.php';
+}
+?>
     <div class="container">
         <div class="header">
             <div class="logo">

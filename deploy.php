@@ -10,6 +10,11 @@ define('BRANCH', 'main'); // یا master
 define('REPO_PATH', __DIR__); // مسیر repository
 define('LOG_FILE', __DIR__ . '/deploy.log');
 
+// Global Error Handler (after config if exists)
+if (file_exists(__DIR__ . '/includes/ErrorHandler.php')) {
+    require_once __DIR__ . '/includes/ErrorHandler.php';
+}
+
 // دریافت payload از GitHub
 $rawPayload = file_get_contents('php://input');
 $headers = getallheaders();
@@ -70,6 +75,9 @@ foreach ($commands as $command) {
         logMessage('ERROR: Command failed with code ' . $returnCode);
         logMessage('Output: ' . implode("\n", $output));
         http_response_code(500);
+        if (function_exists('error_notify_admin')) {
+            error_notify_admin('deploy_failed', 'Command failed: ' . $command, implode("\n", $output));
+        }
         die('Deployment failed');
     }
     

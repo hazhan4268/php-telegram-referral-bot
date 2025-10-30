@@ -16,6 +16,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../config.php';
+// Global error/exception handler (sends errors to admin Telegram)
+if (file_exists(__DIR__ . '/../includes/ErrorHandler.php')) {
+    require_once __DIR__ . '/../includes/ErrorHandler.php';
+}
 require_once __DIR__ . '/../includes/Database.php';
 require_once __DIR__ . '/../includes/BotHelper.php';
 
@@ -23,6 +27,9 @@ require_once __DIR__ . '/../includes/BotHelper.php';
 try {
     $db = Database::getInstance();
 } catch (Throwable $e) {
+    if (function_exists('error_notify_admin')) {
+        error_notify_admin('admin_boot_db', $e->getMessage(), ['file' => __FILE__]);
+    }
     http_response_code(500);
     $isDebug = defined('DEBUG_MODE') && DEBUG_MODE;
     $hintItems = [
