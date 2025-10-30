@@ -3842,6 +3842,20 @@ function renderSettingsTab($db, $csrfToken) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
             <div class="tool-card">
                 <div class="tool-icon">
+                    <span class="material-icons">system_update</span>
+                </div>
+                <div class="tool-content">
+                    <h4>آپدیت سیستم</h4>
+                    <p>دریافت آخرین نسخه از گیت‌هاب و جایگزینی با فایل‌های فعلی</p>
+                    <button class="btn btn-outline btn-sm" onclick="updateSystem()">
+                        <span class="material-icons">cloud_download</span>
+                        آپدیت کن
+                    </button>
+                </div>
+            </div>
+            
+            <div class="tool-card">
+                <div class="tool-icon">
                     <span class="material-icons">cleaning_services</span>
                 </div>
                 <div class="tool-content">
@@ -4016,6 +4030,42 @@ function renderSettingsTab($db, $csrfToken) {
                       '• Webhook: تنظیم شده\n' +
                       '• فایل‌های سیستم: سالم');
             }, 2000);
+        }
+        
+        function updateSystem() {
+            if (!confirm('🔄 آپدیت سیستم\n\nآیا می‌خواهید آخرین نسخه را از گیت‌هاب دریافت کنید؟\n\nتوجه: فایل‌های فعلی جایگزین خواهند شد (config.php حفظ می‌شود)')) {
+                return;
+            }
+            
+            showLoading();
+            
+            fetch('../update.php', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    const buildInfo = data.build ? ` (Build: ${data.build})` : '';
+                    const elapsed = data.elapsed_ms ? ` در ${data.elapsed_ms}ms` : '';
+                    alert(`✅ آپدیت با موفقیت انجام شد!\n\n` +
+                          `• شاخه: ${data.branch || 'main'}\n` +
+                          `• نسخه جدید${buildInfo}\n` +
+                          `• زمان${elapsed}\n\n` +
+                          `صفحه بروزرسانی می‌شود...`);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    alert('❌ خطا در آپدیت:\n\n' + (data.error || 'نامشخص') + 
+                          (data.hint ? '\n\n💡 ' + data.hint : ''));
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                alert('❌ خطا در ارتباط با سرور آپدیت:\n\n' + error.message);
+            });
         }
         
         function submitAction(action, data) {
