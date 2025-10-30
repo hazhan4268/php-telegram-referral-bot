@@ -101,13 +101,20 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     // نمایش صفحه لاگین
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_key'])) {
         $inputKey = $_POST['admin_key'];
-        
-        if ($inputKey === ADMIN_KEY) {
+
+        // Safely read expected admin key and id from config
+        $expectedKey = defined('ADMIN_KEY') ? ADMIN_KEY : '';
+        $adminIdConst = defined('ADMIN_ID') ? ADMIN_ID : 0;
+
+        if ($expectedKey === '') {
+            // Misconfiguration: ADMIN_KEY not set
+            $loginError = 'ADMIN_KEY در فایل config.php تنظیم نشده است. لطفاً نصب را در install.php بازبینی کنید.';
+        } elseif ($inputKey === $expectedKey) {
             $_SESSION['admin_logged_in'] = true;
-            $_SESSION['admin_id'] = ADMIN_ID;
+            $_SESSION['admin_id'] = $adminIdConst;
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             $_SESSION['login_time'] = time();
-            
+
             header('Location: index.php');
             exit;
         } else {

@@ -59,6 +59,16 @@ foreach ($cfg as $k => $v) {
     }
 }
 
+// Ensure APP_VERSION is available even if config.php defines it via a function call (not parseable)
+if (!defined('APP_VERSION')) {
+    $base = @file_get_contents(__DIR__ . '/VERSION');
+    $base = $base ? trim($base) : 'unknown';
+    $build = @file_get_contents(__DIR__ . '/BUILD');
+    $build = $build ? (int)trim($build) : 0;
+    $ver = $build > 0 ? ($base . '+build.' . $build) : $base;
+    define('APP_VERSION', $ver);
+}
+
 // Initialize database and helpers with error handling
 try {
     require_once __DIR__ . '/includes/Database.php';
