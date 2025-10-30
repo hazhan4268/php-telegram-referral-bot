@@ -4,6 +4,13 @@
  * دریافت و پردازش پیام‌های تلگرام
  */
 
+// For non-POST probes (like opening in browser), reply OK and exit early to avoid 500s
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    http_response_code(200);
+    echo 'ok';
+    exit;
+}
+
 // بارگذاری تنظیمات
 if (!file_exists(__DIR__ . '/config.php')) {
     // لاگ و جلوگیری از retry
@@ -16,11 +23,12 @@ if (!file_exists(__DIR__ . '/config.php')) {
     exit;
 }
 
-require_once __DIR__ . '/config.php';
 // Global error/exception handler (send errors to admin)
 if (file_exists(__DIR__ . '/includes/ErrorHandler.php')) {
     require_once __DIR__ . '/includes/ErrorHandler.php';
 }
+
+require_once __DIR__ . '/config.php';
 
 // Initialize database and helpers with error handling
 try {
@@ -38,12 +46,17 @@ try {
     exit;
 }
 
-// بررسی webhook secret
+// بررسی webhook secret - در صورت عدم تطابق، لاگ/اعلان و پاسخ 200 برای جلوگیری از retry
 if (defined('WEBHOOK_SECRET') && !empty(WEBHOOK_SECRET)) {
     $secret = $_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'] ?? '';
     if ($secret !== WEBHOOK_SECRET) {
-        http_response_code(403);
-        die('Invalid secret');
+        error_log('Webhook: invalid secret token header');
+        if (function_exists('error_notify_admin')) {
+            error_notify_admin('webhook_invalid_secret', 'Secret token mismatch');
+        }
+        http_response_code(200);
+        echo 'ok';
+        exit;
     }
 }
 

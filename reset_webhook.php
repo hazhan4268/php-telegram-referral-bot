@@ -6,16 +6,32 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
-if (!file_exists(__DIR__ . '/config.php')) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'config.php missing']);
-    exit;
-}
-require_once __DIR__ . '/config.php';
-
-// Global Error Handler (optional)
+// Global Error Handler (load early)
 if (file_exists(__DIR__ . '/includes/ErrorHandler.php')) {
     require_once __DIR__ . '/includes/ErrorHandler.php';
+}
+
+// Safe-parse config constants without executing config.php
+function parse_config_constants($file) {
+    $out = [];
+    if (!is_file($file)) return $out;
+    $code = @file_get_contents($file);
+    if ($code === false) return $out;
+    $keys = ['BOT_TOKEN','WEBHOOK_URL','WEBHOOK_SECRET','SITE_URL'];
+    foreach ($keys as $key) {
+        if (preg_match("/define\(\s*'" . preg_quote($key, '/') . "'\s*,\s*(?:'([^']*)'|\"([^\"]*)\"|([a-zA-Z0-9_:\\/.+-]+))\s*\)\s*;/", $code, $m)) {
+            $val = $m[1] !== '' ? $m[1] : ($m[2] !== '' ? $m[2] : $m[3]);
+            $out[$key] = $val;
+        }
+    }
+    return $out;
+}
+
+$cfg = parse_config_constants(__DIR__ . '/config.php');
+if (empty($cfg)) {
+    // Always return 200 to avoid upstream 500 masking; include clear error
+    echo json_encode(['success' => false, 'error' => 'config.php missing or unreadable']);
+    exit;
 }
 
 // Auth: admin session or token
@@ -24,27 +40,27 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
     $authorized = true;
 }
 $tokenParam = $_GET['token'] ?? '';
-if (!$authorized && defined('WEBHOOK_SECRET') && WEBHOOK_SECRET && hash_equals(WEBHOOK_SECRET, $tokenParam)) {
+$cfgSecret  = $cfg['WEBHOOK_SECRET'] ?? '';
+if (!$authorized && $cfgSecret !== '' && $tokenParam !== '' && hash_equals($cfgSecret, $tokenParam)) {
     $authorized = true;
 }
 if (!$authorized) {
-    http_response_code(403);
+    // Avoid 500/403 masking; respond 200 with error
     echo json_encode(['success' => false, 'error' => 'Forbidden: admin login or valid token required']);
     exit;
 }
 
-$token = defined('BOT_TOKEN') ? BOT_TOKEN : '';
-$url   = defined('WEBHOOK_URL') ? WEBHOOK_URL : (defined('SITE_URL') ? rtrim(SITE_URL, '/') . '/webhook.php' : '');
-$secret = defined('WEBHOOK_SECRET') ? WEBHOOK_SECRET : '';
+$token = $cfg['BOT_TOKEN'] ?? '';
+$url   = $cfg['WEBHOOK_URL'] ?? (!empty($cfg['SITE_URL']) ? rtrim($cfg['SITE_URL'], '/') . '/webhook.php' : '');
+$secret = $cfg['WEBHOOK_SECRET'] ?? '';
 
 if (empty($token) || empty($url)) {
-    http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'BOT_TOKEN or WEBHOOK_URL is not set']);
     exit;
 }
 
 function tg($method, $data) {
-    $api = 'https://api.telegram.org/bot' . BOT_TOKEN . '/' . $method;
+    $api = 'https://api.telegram.org/bot' . $GLOBALS['token'] . '/' . $method;
     $payload = json_encode($data);
     if (function_exists('curl_init')) {
         $ch = curl_init($api);
@@ -109,6 +125,5 @@ try {
     if (function_exists('error_notify_admin')) {
         error_notify_admin('reset_webhook_exception', $e->getMessage());
     }
-    http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
