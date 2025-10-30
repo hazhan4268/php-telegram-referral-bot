@@ -19,7 +19,75 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/Database.php';
 require_once __DIR__ . '/../includes/BotHelper.php';
 
-$db = Database::getInstance();
+// Initialize database safely to avoid blank 500 pages
+try {
+    $db = Database::getInstance();
+} catch (Throwable $e) {
+    http_response_code(500);
+    $isDebug = defined('DEBUG_MODE') && DEBUG_MODE;
+    $hintItems = [
+        'فایل config.php را بررسی کنید: DB_HOST, DB_NAME, DB_USER, DB_PASS',
+        'از وجود دیتابیس و دسترسی کاربر مطمئن شوید (cPanel → MySQL Databases)',
+        'افزونه PDO و pdo_mysql باید فعال باشند (phpinfo)',
+        'اگر به‌تازگی نصب کرده‌اید، یک‌بار اطلاعات دیتابیس را در install.php بازبینی کنید'
+    ];
+    ?>
+    <!DOCTYPE html>
+    <html lang="fa" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>خطا در اتصال به دیتابیس</title>
+        <style>
+            body { font-family: 'Inter', 'Segoe UI', sans-serif; background: #f9fafb; margin: 0; padding: 24px; }
+            .error-card { max-width: 860px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.08); overflow: hidden; border: 1px solid #e5e7eb; }
+            .header { padding: 20px 24px; background: linear-gradient(135deg, #ef4444, #f59e0b); color: #fff; display: flex; align-items: center; gap: 12px; }
+            .header h2 { margin: 0; font-size: 1.2rem; }
+            .content { padding: 24px; color: #111827; }
+            .hint { background: #fff7ed; border: 1px solid #fed7aa; color: #7c2d12; padding: 16px; border-radius: 12px; margin: 16px 0; }
+            .hint ul { margin: 8px 16px; }
+            .muted { color: #6b7280; font-size: .9rem; }
+            pre { background: #111827; color: #e5e7eb; padding: 16px; border-radius: 12px; overflow:auto; direction:ltr; text-align:left; }
+            .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+            .btn { display:inline-block; padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:600; }
+            .btn-primary { background:#3b82f6; color:#fff; }
+            .btn-outline { border:2px solid #3b82f6; color:#1f2937; }
+        </style>
+    </head>
+    <body>
+        <div class="error-card">
+            <div class="header">
+                <span style="font-size:22px">⚠️</span>
+                <h2>خطا در اتصال به دیتابیس</h2>
+            </div>
+            <div class="content">
+                <p>اتصال به دیتابیس برقرار نشد و به همین دلیل پنل مدیریت در حال حاضر در دسترس نیست.</p>
+                <div class="hint">
+                    <strong>راهنما:</strong>
+                    <ul>
+                        <?php foreach ($hintItems as $h): ?>
+                            <li><?php echo htmlspecialchars($h); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php if ($isDebug): ?>
+                    <div style="margin-top:16px">
+                        <div class="muted">جزئیات خطا (DEBUG_MODE فعال است):</div>
+                        <pre><?php echo htmlspecialchars($e->getMessage()); ?></pre>
+                    </div>
+                <?php endif; ?>
+                <div class="actions">
+                    <a class="btn btn-primary" href="../install.php">بازبینی نصب</a>
+                    <a class="btn btn-outline" href="../">بازگشت به صفحه اصلی</a>
+                </div>
+                <div class="muted" style="margin-top:12px">کد وضعیت: 500 • زمان: <?php echo date('Y-m-d H:i:s'); ?></div>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
 
 // بررسی احراز هویت
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
