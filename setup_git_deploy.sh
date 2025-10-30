@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 
 # مسیر پروژه (تغییر دهید)
 PROJECT_PATH="/home/username/public_html"
-REPO_URL="https://github.com/yourusername/php-telegram-referral-bot.git"
+REPO_URL="https://github.com/hazhan4268/php-telegram-referral-bot.git"
 BRANCH="main"
 
 echo -e "${YELLOW}مرحله 1: بررسی نصب Git${NC}"
