@@ -6,8 +6,14 @@
 
 // بارگذاری تنظیمات
 if (!file_exists(__DIR__ . '/config.php')) {
-    http_response_code(500);
-    die(json_encode(['error' => 'Bot not configured. Run install.php first.']));
+    // لاگ و جلوگیری از retry
+    error_log('Webhook: config.php not found');
+    if (function_exists('error_notify_admin')) {
+        error_notify_admin('webhook_config_missing', 'config.php not found');
+    }
+    http_response_code(200);
+    echo 'ok';
+    exit;
 }
 
 require_once __DIR__ . '/config.php';
@@ -26,8 +32,10 @@ try {
     if (function_exists('error_notify_admin')) {
         error_notify_admin('webhook_boot', $e->getMessage());
     }
-    http_response_code(500);
-    die(json_encode(['error' => 'Bot initialization failed']));
+    // جلوگیری از retry
+    http_response_code(200);
+    echo 'ok';
+    exit;
 }
 
 // بررسی webhook secret
