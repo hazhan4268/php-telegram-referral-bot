@@ -80,7 +80,12 @@ class Database {
      * ایجاد schema دیتابیس
      */
     public function createSchema() {
-        $sql = file_get_contents(__DIR__ . '/schema.sql');
+        // schema.sql is located at project root
+        $schemaPath = dirname(__DIR__) . '/schema.sql';
+        if (!is_file($schemaPath)) {
+            throw new RuntimeException('schema.sql not found at: ' . $schemaPath);
+        }
+        $sql = file_get_contents($schemaPath);
         
         // تبدیل schema از SQLite به MySQL
         $sql = $this->convertSchemaToMySQL($sql);

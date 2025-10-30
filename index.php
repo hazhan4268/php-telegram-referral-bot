@@ -1406,34 +1406,64 @@ $csrfToken = $_SESSION['csrf_token'];
                 <div class="loading-spinner"></div>
             </div>
             <?php
-            // نمایش تب فعال
-            switch ($activeTab) {
-                case 'stats':
-                    renderStatsTab($db, $csrfToken);
-                    break;
-                case 'users':
-                    renderUsersTab($db, $csrfToken);
-                    break;
-                case 'claims':
-                    renderClaimsTab($db, $csrfToken);
-                    break;
-                case 'channels':
-                    renderChannelsTab($db, $csrfToken);
-                    break;
-                case 'broadcast':
-                    renderBroadcastTab($db, $csrfToken);
-                    break;
-                case 'analytics':
-                    renderAnalyticsTab($db, $csrfToken);
-                    break;
-                case 'settings':
-                    renderSettingsTab($db, $csrfToken);
-                    break;
-                case 'logs':
-                    renderLogsTab($db, $csrfToken);
-                    break;
-                default:
-                    renderStatsTab($db, $csrfToken);
+            // نمایش تب فعال با مدیریت خطا برای جلوگیری از 500
+            try {
+                switch ($activeTab) {
+                    case 'stats':
+                        renderStatsTab($db, $csrfToken);
+                        break;
+                    case 'users':
+                        renderUsersTab($db, $csrfToken);
+                        break;
+                    case 'claims':
+                        renderClaimsTab($db, $csrfToken);
+                        break;
+                    case 'channels':
+                        renderChannelsTab($db, $csrfToken);
+                        break;
+                    case 'broadcast':
+                        renderBroadcastTab($db, $csrfToken);
+                        break;
+                    case 'analytics':
+                        renderAnalyticsTab($db, $csrfToken);
+                        break;
+                    case 'settings':
+                        renderSettingsTab($db, $csrfToken);
+                        break;
+                    case 'logs':
+                        renderLogsTab($db, $csrfToken);
+                        break;
+                    default:
+                        renderStatsTab($db, $csrfToken);
+                }
+            } catch (Throwable $e) {
+                $isDebug = defined('DEBUG_MODE') && DEBUG_MODE;
+                $err = $isDebug ? htmlspecialchars($e->getMessage()) : 'خطای غیرمنتظره هنگام بارگذاری تب.';
+                ?>
+                <div class="card" style="border-color:#fca5a5">
+                    <h3><span class="material-icons">error</span> مشکل در بارگذاری داشبورد</h3>
+                    <div class="alert alert-error" style="margin-top:12px">
+                        <span class="material-icons">report</span>
+                        <div>
+                            <div>در نمایش این بخش خطایی رخ داد.</div>
+                            <?php if ($isDebug): ?>
+                                <div style="margin-top:8px"><code style="direction:ltr;display:block;background:#111827;color:#e5e7eb;padding:8px;border-radius:8px;overflow:auto;"><?= $err ?></code></div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning" style="margin-top:12px">
+                        <span class="material-icons">storage</span>
+                        <div>
+                            <div>اگر جداول دیتابیس ایجاد نشده‌اند، از دکمه زیر برای راه‌اندازی دیتابیس استفاده کنید.</div>
+                        </div>
+                    </div>
+                    <form method="post" onsubmit="showLoading()">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                        <input type="hidden" name="action" value="init_schema">
+                        <button class="btn btn-success" type="submit"><span class="material-icons">build</span> راه‌اندازی دیتابیس</button>
+                    </form>
+                </div>
+                <?php
             }
             ?>
         </div>
@@ -4654,6 +4684,22 @@ function handleAction($action, $data) {
     
     try {
         switch ($action) {
+            case 'init_schema':
+                // اجرای schema.sql برای ایجاد/ترمیم جداول
+                $pdo = $db->getConnection();
+                $schemaPath = dirname(__DIR__) . '/schema.sql';
+                if (!is_file($schemaPath)) {
+                    throw new RuntimeException('schema.sql یافت نشد');
+                }
+                $sql = file_get_contents($schemaPath);
+                $queries = array_filter(array_map('trim', explode(';', $sql)));
+                foreach ($queries as $q) {
+                    if ($q !== '') {
+                        $pdo->exec($q);
+                    }
+                }
+                $output = '<div class="alert alert-success"><span class="material-icons">check_circle</span>دیتابیس با موفقیت راه‌اندازی شد.</div>';
+                break;
             case 'approve_claim':
                 $claimId = (int)$data['claim_id'];
                 $claim = $db->fetchOne("SELECT * FROM claims WHERE id = ?", [$claimId]);
