@@ -1,7 +1,7 @@
 <?php
 class ToolsCommon {
     public static function parseConfig() {
-        $file = __DIR__ . '/../../config.php';
+        $file = __DIR__ . '/config.php';
         $out = [];
         if (!is_file($file)) return $out;
         $code = @file_get_contents($file);

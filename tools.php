@@ -13,11 +13,11 @@ $action = $_GET['a'] ?? '';
 
 // Map actions to handler classes and files
 $routes = [
-    'ping' => ['file' => __DIR__ . '/includes/tools/Ping.php', 'class' => 'ToolsPing', 'method' => 'handle'],
-    'get_webhook_info' => ['file' => __DIR__ . '/includes/tools/WebhookInfo.php', 'class' => 'ToolsWebhookInfo', 'method' => 'handle'],
-    'reset_webhook' => ['file' => __DIR__ . '/includes/tools/ResetWebhook.php', 'class' => 'ToolsResetWebhook', 'method' => 'handle'],
-    'health' => ['file' => __DIR__ . '/includes/tools/Health.php', 'class' => 'ToolsHealth', 'method' => 'handle'],
-    'webhook_debug' => ['file' => __DIR__ . '/includes/tools/WebhookDebug.php', 'class' => 'ToolsWebhookDebug', 'method' => 'handle'],
+    'ping' => ['file' => __DIR__ . '/Ping.php', 'class' => 'ToolsPing', 'method' => 'handle'],
+    'get_webhook_info' => ['file' => __DIR__ . '/WebhookInfo.php', 'class' => 'ToolsWebhookInfo', 'method' => 'handle'],
+    'reset_webhook' => ['file' => __DIR__ . '/ResetWebhook.php', 'class' => 'ToolsResetWebhook', 'method' => 'handle'],
+    'health' => ['file' => __DIR__ . '/Health.php', 'class' => 'ToolsHealth', 'method' => 'handle'],
+    'webhook_debug' => ['file' => __DIR__ . '/WebhookDebug.php', 'class' => 'ToolsWebhookDebug', 'method' => 'handle'],
 ];
 
 if (isset($routes[$action])) {
