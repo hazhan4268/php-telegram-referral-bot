@@ -128,6 +128,8 @@ cd ~/public_html
 **نسخه‌دهی خودکار:** VERSION در گیت، BUILD روی سرور → `APP_VERSION = 2.1.0+build.N`
 
 📖 **راهنمای کامل:** [DOCS.md](DOCS.md)
+ 
+ 📘 **آموزش ساخت شاخه برای Pull:** [GIT_BRANCH_TUTORIAL.md](GIT_BRANCH_TUTORIAL.md)
 
 ## 🏷️ سیاست نسخه‌دهی خودکار
 

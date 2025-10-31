@@ -59,3 +59,13 @@ define('CACHE_TTL', 300); // 5 دقیقه
 define('MAINTENANCE_MODE', false);
 
 date_default_timezone_set(TIMEZONE);
+
+// --- GitHub Update (اختیاری) ---
+// برای آپدیت مستقیم از GitHub به‌صورت ZIP (بدون git)، می‌توانید ریپو را اینجا تعریف کنید
+// اگر این مقادیر را ست کنید، در آدرس /update.php فقط کافیست source=zip و ref را بدهید
+// مثال: /update.php?source=zip&ref=staging
+// اگر ریپو private است، می‌توانید GITHUB_TOKEN (با دسترسی read repo) را هم تنظیم کنید
+// توجه: این فایل را در گیت commit نکنید.
+// define('GITHUB_OWNER', 'your-github-user');
+// define('GITHUB_REPO', 'your-repo-name');
+// define('GITHUB_TOKEN', 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');

@@ -4838,6 +4838,98 @@ function renderLogsTab($db, $csrfToken) {
 }
 
 /**
+ * تب تنظیمات سیستم
+ */
+function renderSettingsTab($db, $csrfToken) {
+    // خواندن پیش‌فرض‌ها برای GitHub
+    $owner = defined('GITHUB_OWNER') ? GITHUB_OWNER : 'hazhan4268';
+    $repo  = defined('GITHUB_REPO') ? GITHUB_REPO : 'php-telegram-referral-bot';
+    $refDefault = 'main';
+    $appVersion = defined('APP_VERSION') ? APP_VERSION : 'unknown';
+    ?>
+    <div class="card">
+        <h3><span class="material-icons">info</span> اطلاعات سیستم</h3>
+        <div style="margin-top:12px; color: var(--text-secondary)">
+            نسخه برنامه: <strong><?php echo htmlspecialchars($appVersion); ?></strong>
+        </div>
+        <div style="margin-top:8px">
+            <a class="btn btn-outline btn-sm" href="../tools.php?a=health" target="_blank">
+                <span class="material-icons">favorite</span>
+                بررسی سلامت سیستم
+            </a>
+            <a class="btn btn-outline btn-sm" href="../GIT_BRANCH_TUTORIAL.html" target="_blank">
+                <span class="material-icons">book</span>
+                راهنمای به‌روزرسانی (Branch/ZIP)
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3><span class="material-icons">system_update_alt</span> آپدیت مستقیم از GitHub (ZIP) - بدون نیاز به git</h3>
+        <div class="two-col-grid">
+            <div class="form-group">
+                <label class="form-label">OWNER/REPO</label>
+                <input id="zip-repo" class="form-input" value="<?php echo htmlspecialchars($owner . '/' . $repo); ?>" placeholder="مثال: user/repo">
+            </div>
+            <div class="form-group">
+                <label class="form-label">ref (branch/tag/commit)</label>
+                <input id="zip-ref" class="form-input" value="<?php echo htmlspecialchars($refDefault); ?>" placeholder="مثال: main یا v2.1.0 یا 9f3c1ab">
+            </div>
+        </div>
+        <div class="form-group" style="margin-top:8px">
+            <button id="zip-update-btn" class="btn">
+                <span class="material-icons">cloud_download</span>
+                آپدیت مستقیم (ZIP)
+            </button>
+        </div>
+        <div id="zip-result" class="alert" style="display:none; margin-top:12px"></div>
+        <div class="muted" style="margin-top:8px">
+            نکته: برای ریپوی private باید <code>GITHUB_TOKEN</code> را در <code>config.php</code> تنظیم کنید.
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        const btn = document.getElementById('zip-update-btn');
+        const repoEl = document.getElementById('zip-repo');
+        const refEl = document.getElementById('zip-ref');
+        const box = document.getElementById('zip-result');
+        const overlay = document.getElementById('loading-overlay');
+
+        function show(msg, ok){
+            box.style.display = 'block';
+            box.className = 'alert ' + (ok ? 'alert-success' : 'alert-error');
+            box.innerHTML = '<span class="material-icons">' + (ok ? 'check_circle' : 'error') + '</span>' + (typeof msg === 'string' ? msg : (msg && msg.error ? msg.error : 'نامشخص'));
+        }
+
+        btn.addEventListener('click', async function(){
+            const repo = repoEl.value.trim();
+            const ref  = refEl.value.trim() || 'main';
+            if(!repo || repo.indexOf('/') === -1){
+                return show('OWNER/REPO را به‌صورت صحیح وارد کنید (مثال: user/repo)', false);
+            }
+            try {
+                overlay && overlay.classList.add('active');
+                const url = `../update.php?source=zip&repo=${encodeURIComponent(repo)}&ref=${encodeURIComponent(ref)}`;
+                const res = await fetch(url, { credentials: 'same-origin' });
+                const data = await res.json();
+                if(data && data.success){
+                    show('با موفقیت به‌روزرسانی شد. حالت: ' + (data.mode || 'zip') + (data.ref ? ' • ref: ' + data.ref : ''), true);
+                } else {
+                    show(data || {error: 'Update failed'}, false);
+                }
+            } catch (e){
+                show('خطای شبکه/سرور: ' + e, false);
+            } finally {
+                overlay && overlay.classList.remove('active');
+            }
+        });
+    })();
+    </script>
+    <?php
+}
+
+/**
  * پردازش اکشن‌ها - نسخه بهبود یافته
  */
 function handleAction($action, $data) {
