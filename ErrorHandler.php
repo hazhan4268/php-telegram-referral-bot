@@ -9,64 +9,50 @@
 if (!function_exists('error_notify_admin')) {
 
     function error_notify_admin($title, $message, $context = '') {
-        // Try Telegram
+        // Load modules (no fatal if not found)
+        @require_once __DIR__ . '/errors/Snapshot.php';
+        @require_once __DIR__ . '/errors/Throttle.php';
+        @require_once __DIR__ . '/errors/Notifier.php';
+        @require_once __DIR__ . '/errors/FileLogger.php';
+        @require_once __DIR__ . '/errors/DBLogger.php';
+
+        // Config knobs
+        if (!defined('ERROR_SNAPSHOT_KEEP')) define('ERROR_SNAPSHOT_KEEP', 100);
+        if (!defined('ERROR_NOTIFY_THROTTLE')) define('ERROR_NOTIFY_THROTTLE', 600); // seconds
+
+        // Common metadata
+        $meta = [
+            'host' => isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'CLI',
+            'uri'  => isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '',
+            'time' => date('Y-m-d H:i:s'),
+            'version' => defined('APP_VERSION') ? APP_VERSION : 'unknown',
+        ];
+
+        // Snapshot (best effort)
+        if (class_exists('ErrorSnapshot')) {
+            ErrorSnapshot::write($title, $message, $context, $meta, (int)ERROR_SNAPSHOT_KEEP);
+        }
+
+        // Try Telegram (with throttle)
         if (defined('BOT_TOKEN') && defined('ADMIN_ID') && BOT_TOKEN && ADMIN_ID) {
-            $maxLen = 3500; // keep below Telegram 4096
-            $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'CLI';
-            $uri  = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
-            $time = date('Y-m-d H:i:s');
-            $ver  = defined('APP_VERSION') ? APP_VERSION : 'unknown';
-
-            $lines = [];
-            $lines[] = "🚨 خطای سیستم";
-            $lines[] = "عنوان: {$title}";
-            $lines[] = "زمان: {$time}";
-            $lines[] = "نسخه: {$ver}";
-            $lines[] = "مسیر: {$host}{$uri}";
-            $lines[] = "پیام: {$message}";
-            if ($context) { $lines[] = "جزئیات: " . (is_string($context) ? $context : json_encode($context)); }
-            $text = implode("\n", $lines);
-
-            if (strlen($text) > $maxLen) {
-                $text = substr($text, 0, $maxLen) . "\n…";
+            $allow = true;
+            if (class_exists('ErrorThrottle')) {
+                $allow = ErrorThrottle::allow('tg_' . $title, (int)ERROR_NOTIFY_THROTTLE);
             }
-
-            // Send to Telegram without relying on BotHelper
-            $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/sendMessage";
-            $payload = json_encode([
-                'chat_id' => ADMIN_ID,
-                'text' => $text,
-                'disable_web_page_preview' => true
-            ]);
-            if (function_exists('curl_init')) {
-                $ch = curl_init($url);
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-                @curl_exec($ch);
-                @curl_close($ch);
+            if ($allow && class_exists('ErrorNotifier')) {
+                ErrorNotifier::sendTelegram($title, $message, $context, $meta);
             }
         }
 
         // Also try to persist in DB if available
-        if (class_exists('Database')) {
-            try {
-                $db = Database::getInstance();
-                $db->execute(
-                    "INSERT INTO admin_errors (type, message, context, created_at) VALUES (?, ?, ?, ?)",
-                    [$title, $message, is_string($context) ? $context : json_encode($context), time()]
-                );
-            } catch (Throwable $e) {
-                // ignore
-            }
+        if (class_exists('ErrorDBLogger')) {
+            ErrorDBLogger::write($title, $message, $context);
         }
 
         // Always write to a local log file
-        $logFile = __DIR__ . '/../deploy.log';
-        $ts = date('Y-m-d H:i:s');
-        @file_put_contents($logFile, "[{$ts}] [ERROR] {$title} | {$message}\n", FILE_APPEND);
+        if (class_exists('ErrorFileLogger')) {
+            ErrorFileLogger::write($title, $message);
+        }
     }
 
     // PHP error handler: notify but don't turn warnings/notices into fatal exceptions

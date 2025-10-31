@@ -89,17 +89,77 @@ try {
     exit;
 }
 
-// بررسی webhook secret - در صورت عدم تطابق، لاگ/اعلان و پاسخ 200 برای جلوگیری از retry
+// بررسی webhook secret - در صورت عدم تطابق، مدیریت همراه با fallback اختیاری و جلوگیری از اسپم
+if (!defined('WEBHOOK_IP_FALLBACK')) { define('WEBHOOK_IP_FALLBACK', false); }
 if (defined('WEBHOOK_SECRET') && !empty(WEBHOOK_SECRET)) {
     $secret = $_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'] ?? '';
-    if ($secret !== WEBHOOK_SECRET) {
-        error_log('Webhook: invalid secret token header');
-        if (function_exists('error_notify_admin')) {
-            error_notify_admin('webhook_invalid_secret', 'Secret token mismatch');
+    if ($secret === '' && isset($_SERVER['REDIRECT_HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'])) {
+        $secret = $_SERVER['REDIRECT_HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'];
+    }
+    if ($secret === '' && function_exists('getallheaders')) {
+        $headers = getallheaders();
+        if (is_array($headers)) {
+            foreach ($headers as $k => $v) {
+                if (strcasecmp($k, 'X-Telegram-Bot-Api-Secret-Token') === 0) {
+                    $secret = $v;
+                    break;
+                }
+            }
         }
-        http_response_code(200);
-        echo 'ok';
-        exit;
+    }
+    // Normalize potential whitespace or stray quotes
+    if (is_string($secret)) {
+        $secret = trim($secret, "\r\n\t \"'");
+    }
+
+    // اگر هدر وجود ندارد یا متفاوت است، بررسی fallback اختیاری بر اساس IPهای شناخته‌شده تلگرام
+    if (!is_string($secret) || !is_string(WEBHOOK_SECRET) || !hash_equals(WEBHOOK_SECRET, $secret)) {
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? '';
+
+        $allowByIp = false;
+        if (WEBHOOK_IP_FALLBACK && filter_var($remoteIp, FILTER_VALIDATE_IP)) {
+            // محدوده‌های شناخته‌شده تلگرام برای وبهوک (IPv4)
+            $cidrs = [
+                '149.154.160.0/20',
+                '91.108.4.0/22',
+            ];
+            $allowByIp = ip_in_cidr_list($remoteIp, $cidrs);
+        }
+
+        if (!$allowByIp) {
+            // Throttle notifications to avoid spam
+            $flag = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'php_referral_webhook_secret_last.txt';
+            $now = time();
+            $last = @is_file($flag) ? (int)@file_get_contents($flag) : 0;
+            if ($now - $last > 600) { // notify at most once every 10 minutes
+                @file_put_contents($flag, (string)$now, LOCK_EX);
+                error_log('Webhook: invalid secret token header from IP ' . $remoteIp);
+                if (function_exists('error_notify_admin')) {
+                    error_notify_admin('webhook_invalid_secret', 'Secret token mismatch', 'ip=' . $remoteIp);
+                }
+            }
+            http_response_code(200);
+            echo 'ok';
+            exit;
+        }
+        // else: allow by IP fallback
+    }
+}
+
+// Helper: check if IPv4 is in a list of CIDRs
+if (!function_exists('ip_in_cidr_list')) {
+    function ip_in_cidr_list($ip, array $cidrs) {
+        $ipLong = ip2long($ip);
+        if ($ipLong === false) return false;
+        foreach ($cidrs as $cidr) {
+            [$subnet, $mask] = explode('/', $cidr, 2);
+            $subnetLong = ip2long($subnet);
+            $mask = (int)$mask;
+            if ($subnetLong === false || $mask < 0 || $mask > 32) continue;
+            $maskLong = $mask === 0 ? 0 : (~0 << (32 - $mask)) & 0xFFFFFFFF;
+            if ( ($ipLong & $maskLong) === ($subnetLong & $maskLong) ) return true;
+        }
+        return false;
     }
 }
 

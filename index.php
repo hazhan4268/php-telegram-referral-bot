@@ -4903,8 +4903,8 @@ function renderLogsTab($db, $csrfToken) {
  */
 function renderSettingsTab($db, $csrfToken) {
     // خواندن پیش‌فرض‌ها برای GitHub
-    $owner = defined('GITHUB_OWNER') ? GITHUB_OWNER : 'hazhan4268';
-    $repo  = defined('GITHUB_REPO') ? GITHUB_REPO : 'php-telegram-referral-bot';
+    $owner = defined('GITHUB_OWNER') ? GITHUB_OWNER : '';
+    $repo  = defined('GITHUB_REPO') ? GITHUB_REPO : '';
     $refDefault = 'main';
     $appVersion = defined('APP_VERSION') ? APP_VERSION : 'unknown';
     ?>
@@ -4940,7 +4940,7 @@ function renderSettingsTab($db, $csrfToken) {
         <div class="two-col-grid">
             <div class="form-group">
                 <label class="form-label">OWNER/REPO</label>
-                <input id="zip-repo" class="form-input" value="<?php echo htmlspecialchars($owner . '/' . $repo); ?>" placeholder="مثال: user/repo">
+                <input id="zip-repo" class="form-input" value="<?php echo htmlspecialchars(($owner && $repo) ? ($owner . '/' . $repo) : ''); ?>" placeholder="مثال: user/repo">
             </div>
             <div class="form-group">
                 <label class="form-label">ref (branch/tag/commit)</label>
