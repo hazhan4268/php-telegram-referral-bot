@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS member_cache (
   status VARCHAR(50),
   cached_at INT NOT NULL,
   PRIMARY KEY(channel, user_id),
-  INDEX idx_cached_at (cached_at DESC)
+  INDEX idx_cached_at (cached_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS claims (
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS claims (
   points_deducted INT NOT NULL DEFAULT 0,
   INDEX idx_status (status),
   INDEX idx_user_status (user_id, status),
-  INDEX idx_created (created_at DESC)
+  INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS bans (
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS score_logs (
   by_admin VARCHAR(255),
   created_at INT NOT NULL,
   INDEX idx_user (user_id),
-  INDEX idx_created (created_at DESC)
+  INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS post_msgs (
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   csrf_token VARCHAR(255) NOT NULL,
   created_at INT NOT NULL,
   INDEX idx_admin (admin_id),
-  INDEX idx_created (created_at DESC)
+  INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sponsors (
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS sponsors (
   active INT DEFAULT 1,
   created_at INT NOT NULL,
   updated_at INT,
-  INDEX idx_active_priority (active, priority DESC)
+  INDEX idx_active_priority (active, priority)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sponsor_views (
@@ -155,8 +155,8 @@ CREATE TABLE IF NOT EXISTS sponsor_views (
   sponsor_id INT NOT NULL,
   user_id BIGINT NOT NULL,
   viewed_at INT NOT NULL,
-  INDEX idx_sponsor (sponsor_id, viewed_at DESC),
-  INDEX idx_user (user_id, viewed_at DESC)
+  INDEX idx_sponsor (sponsor_id, viewed_at),
+  INDEX idx_user (user_id, viewed_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sponsor_clicks (
@@ -164,8 +164,8 @@ CREATE TABLE IF NOT EXISTS sponsor_clicks (
   sponsor_id INT NOT NULL,
   user_id BIGINT NOT NULL,
   clicked_at INT NOT NULL,
-  INDEX idx_sponsor (sponsor_id, clicked_at DESC),
-  INDEX idx_user (user_id, clicked_at DESC)
+  INDEX idx_sponsor (sponsor_id, clicked_at),
+  INDEX idx_user (user_id, clicked_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS admin_errors (
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS admin_errors (
   message TEXT NOT NULL,
   context TEXT,
   created_at INT NOT NULL,
-  INDEX idx_created (created_at DESC),
+  INDEX idx_created (created_at),
   INDEX idx_type (type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS logs (
   type VARCHAR(50) NOT NULL,
   message TEXT NOT NULL,
   meta TEXT,
-  INDEX idx_time (time DESC),
+  INDEX idx_time (time),
   INDEX idx_type (type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -194,7 +194,7 @@ CREATE TABLE IF NOT EXISTS admin_logs (
   actor VARCHAR(255),
   meta TEXT,
   created_at INT NOT NULL,
-  INDEX idx_created (created_at DESC)
+  INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- تنظیمات پیش‌فرض

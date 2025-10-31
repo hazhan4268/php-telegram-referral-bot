@@ -15,16 +15,107 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once __DIR__ . '/../config.php';
-// Global error/exception handler (sends errors to admin Telegram)
+// Global error/exception handler (sends errors to admin Telegram) - load as early as possible
 if (file_exists(__DIR__ . '/../includes/ErrorHandler.php')) {
     require_once __DIR__ . '/../includes/ErrorHandler.php';
 }
-require_once __DIR__ . '/../includes/Database.php';
-require_once __DIR__ . '/../includes/BotHelper.php';
+
+// Safe config loader (avoid requiring config.php to prevent fatal parse errors)
+function admin_parse_config_constants($file) {
+    $out = [];
+    if (!is_file($file)) return $out;
+    $code = @file_get_contents($file);
+    if ($code === false) return $out;
+    $keys = [
+        'DB_HOST','DB_NAME','DB_USER','DB_PASS','DB_CHARSET',
+        'BOT_TOKEN','ADMIN_ID','ADMIN_KEY','WEBHOOK_SECRET','SITE_URL','DEBUG_MODE','ENVIRONMENT','TIMEZONE'
+    ];
+    foreach ($keys as $key) {
+        if (preg_match("/define\\(\\s*'" . preg_quote($key, '/') . "'\\s*,\\s*(?:'([^']*)'|\"([^\"]*)\"|([a-zA-Z0-9_:\\/.+-]+))\\s*\\)\\s*;/", $code, $m)) {
+            $val = $m[1] !== '' ? $m[1] : ($m[2] !== '' ? $m[2] : $m[3]);
+            $lower = strtolower($val);
+            if ($lower === 'true') { $val = true; }
+            elseif ($lower === 'false') { $val = false; }
+            elseif (preg_match('/^-?\\d+$/', $val)) { $val = (int)$val; }
+            $out[$key] = $val;
+        }
+    }
+    return $out;
+}
+
+$cfg = admin_parse_config_constants(__DIR__ . '/../config.php');
+if (empty($cfg)) {
+    http_response_code(500);
+    ?>
+    <!DOCTYPE html>
+    <html lang="fa" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>پیکربندی یافت نشد</title>
+        <style>
+            body { font-family: 'Inter','Segoe UI',sans-serif; background:#f9fafb; margin:0; padding:24px; }
+            .card { max-width: 820px; margin:40px auto; background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08); border:1px solid #e5e7eb; overflow:hidden; }
+            .header { padding:20px 24px; background:linear-gradient(135deg,#6366f1,#06b6d4); color:#fff; }
+            .content { padding:24px; color:#111827; }
+            .hint { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; padding:16px; border-radius:12px; }
+            .actions { margin-top:16px; display:flex; gap:10px; }
+            .btn { display:inline-block; padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:600; }
+            .btn-primary { background:#3b82f6; color:#fff; }
+            .btn-outline { border:2px solid #3b82f6; color:#1f2937; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header"><h2>پیکربندی یافت نشد</h2></div>
+            <div class="content">
+                <p>فایل <code>config.php</code> پیدا نشد یا قابل خواندن نیست. لطفاً نصب را بازبینی کنید.</p>
+                <div class="hint">
+                    <ul>
+                        <li>به <code>/install.php</code> بروید و تنظیمات را تکمیل کنید.</li>
+                        <li>سطح دسترسی فایل <code>config.php</code> را بررسی کنید.</li>
+                        <li>اگر اخیراً ویرایش کرده‌اید، از نبود خطای نحوی (Parse Error) مطمئن شوید.</li>
+                    </ul>
+                </div>
+                <div class="actions">
+                    <a class="btn btn-primary" href="../install.php">اجرای نصب</a>
+                    <a class="btn btn-outline" href="../">بازگشت</a>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+// Define constants if not already defined
+foreach ($cfg as $k => $v) {
+    if (!defined($k)) {
+        define($k, $v);
+    }
+}
+
+// Ensure APP_VERSION is available
+if (!defined('APP_VERSION')) {
+    $base = @file_get_contents(__DIR__ . '/../VERSION');
+    $base = $base ? trim($base) : 'unknown';
+    $build = @file_get_contents(__DIR__ . '/../BUILD');
+    $build = $build ? (int)trim($build) : 0;
+    $ver = $build > 0 ? ($base . '+build.' . $build) : $base;
+    define('APP_VERSION', $ver);
+}
+
+// Sensible defaults for optional config
+if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
+if (!defined('TIMEZONE')) define('TIMEZONE', 'Asia/Tehran');
+@date_default_timezone_set(TIMEZONE);
+
 
 // Initialize database safely to avoid blank 500 pages
 try {
+    require_once __DIR__ . '/../includes/Database.php';
+    require_once __DIR__ . '/../includes/BotHelper.php';
     $db = Database::getInstance();
 } catch (Throwable $e) {
     if (function_exists('error_notify_admin')) {
@@ -349,14 +440,14 @@ $csrfToken = $_SESSION['csrf_token'];
             min-height: 100vh;
             color: var(--text-primary);
             transition: all 0.3s ease;
-            overflow: hidden; /* اسکرول فقط در main-content */
+            overflow-y: auto; /* اجازه اسکرول صفحه */
             scrollbar-gutter: stable both-edges; /* جلوگیری از جابجایی layout هنگام ظاهر شدن اسکرول */
         }
         
         .container {
             display: flex;
             min-height: 100vh;
-            height: 100vh; /* تثبیت ارتفاع برای جلوگیری از پرش اسکرول */
+            height: auto; /* اجازه رشد محتوا و اسکرول بدنه */
             max-width: 1920px;
             margin: 0 auto;
         }
@@ -484,9 +575,9 @@ $csrfToken = $_SESSION['csrf_token'];
         .main-content {
             flex: 1;
             padding: 20px;
-            overflow-y: auto;
+            overflow: visible; /* اسکرول توسط بدنه انجام می‌شود */
             background: transparent;
-            height: calc(100vh - 40px); /* 20px padding بالا و پایین */
+            min-height: calc(100vh - 40px); /* حداقل ارتفاع برای پر کردن صفحه */
             scrollbar-gutter: stable both-edges;
         }
         
@@ -3886,6 +3977,64 @@ function renderSettingsTab($db, $csrfToken) {
         </form>
     </div>
     
+    <!-- ابزارهای نگهداری و آپدیت -->
+    <div class="card">
+        <h3>
+            <span class="material-icons">system_update_alt</span>
+            ابزارهای به‌روزرسانی (GitHub)
+        </h3>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: end; margin-bottom: 12px;">
+            <div class="form-group">
+                <label class="form-label">
+                    <span class="material-icons" style="vertical-align: middle; margin-left: 8px;">alt_route</span>
+                    شاخه (Branch)
+                </label>
+                <input id="git-branch" type="text" class="form-input" value="main" placeholder="main | master | ...">
+                <div style="font-size: 0.8em; color: var(--text-secondary); margin-top: 4px;">
+                    شاخه‌ای که می‌خواهید از آن Pull انجام شود.
+                </div>
+            </div>
+            <div>
+                <button type="button" class="btn" onclick="updateFromGit()">
+                    <span class="material-icons">cloud_download</span>
+                    آپدیت از GitHub
+                </button>
+            </div>
+        </div>
+        <div id="git-update-result" class="alert" style="display:none"></div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-top: 8px;">
+            نکته: برای دیپلوی خودکار با Webhook از فایل <code>deploy.php</code> استفاده کنید و مقدار <code>GITHUB_SECRET</code> را تنظیم نمایید.
+        </div>
+    </div>
+
+    <script>
+        async function updateFromGit() {
+            const branch = document.getElementById('git-branch').value.trim() || 'main';
+            if (!confirm(`آیا مطمئن هستید که می‌خواهید از شاخه "${branch}" به‌روزرسانی کنید؟`)) return;
+            try {
+                showLoading();
+                const res = await fetch(`../update.php?branch=${encodeURIComponent(branch)}`, { credentials: 'same-origin' });
+                const data = await res.json();
+                const box = document.getElementById('git-update-result');
+                box.style.display = 'block';
+                if (data.success) {
+                    box.className = 'alert alert-success';
+                    box.innerHTML = `<span class="material-icons">check_circle</span><div>آپدیت با موفقیت انجام شد. نسخه ساخت: <b>${data.build ?? ''}</b> • زمان: ${data.elapsed_ms ?? ''}ms</div>`;
+                } else {
+                    box.className = 'alert alert-error';
+                    box.innerHTML = `<span class="material-icons">error</span><div>خطا در آپدیت: ${data.error || 'نامشخص'}${data.hint ? '<br>' + data.hint : ''}</div>`;
+                }
+            } catch (e) {
+                const box = document.getElementById('git-update-result');
+                box.style.display = 'block';
+                box.className = 'alert alert-error';
+                box.innerHTML = `<span class=\"material-icons\">error</span><div>خطای ارتباط با سرور</div>`;
+            } finally {
+                hideLoading();
+            }
+        }
+    </script>
+
     <!-- اطلاعات سیستم -->
     <div class="card">
         <h3>
@@ -3907,7 +4056,7 @@ function renderSettingsTab($db, $csrfToken) {
                     <span class="material-icons">extension</span>
                     نسخه ربات
                 </div>
-                <div class="info-value"><?php echo APP_VERSION; ?></div>
+                <div class="info-value"><?php echo defined('APP_VERSION') ? APP_VERSION : 'unknown'; ?></div>
             </div>
             
             <div class="info-item">
