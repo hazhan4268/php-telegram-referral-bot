@@ -39,7 +39,7 @@ define('TIMEZONE', 'Asia/Tehran');
 if (!function_exists('app_version')) {
 	function app_version() {
 		$base = @file_get_contents(__DIR__ . '/VERSION');
-	$base = $base ? trim($base) : '2.1.0';
+	$base = $base ? trim($base) : '4.0.1';
 		$build = @file_get_contents(__DIR__ . '/BUILD');
 		$build = $build ? (int)trim($build) : 0;
 		return $build > 0 ? ($base . '+build.' . $build) : $base;

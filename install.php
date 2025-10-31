@@ -778,7 +778,7 @@ if (file_exists(__DIR__ . '/includes/ErrorHandler.php')) {
                     $configContent .= "define('CSRF_TOKEN_LENGTH', 32);\n";
                     $configContent .= "define('TIMEZONE', 'Asia/Tehran');\n";
                     // نسخه برنامه به‌صورت پویا از فایل‌ها خوانده می‌شود
-                    $configContent .= "if (!function_exists('app_version')) { function app_version() { $base = @file_get_contents(__DIR__ . '/VERSION'); $base = $base ? trim($base) : '2.1.0'; $build = @file_get_contents(__DIR__ . '/BUILD'); $build = $build ? (int)trim($build) : 0; return $build > 0 ? ($base . '+build.' . $build) : $base; } }\n";
+                    $configContent .= "if (!function_exists('app_version')) { function app_version() { $base = @file_get_contents(__DIR__ . '/VERSION'); $base = $base ? trim($base) : '4.0.1'; $build = @file_get_contents(__DIR__ . '/BUILD'); $build = $build ? (int)trim($build) : 0; return $build > 0 ? ($base . '+build.' . $build) : $base; } }\n";
                     $configContent .= "define('APP_VERSION', app_version());\n";
                     $configContent .= "define('ENVIRONMENT', 'production');\n";
                     $configContent .= "define('DEBUG_MODE', false);\n";

@@ -4944,7 +4944,7 @@ function renderSettingsTab($db, $csrfToken) {
             </div>
             <div class="form-group">
                 <label class="form-label">ref (branch/tag/commit)</label>
-                <input id="zip-ref" class="form-input" value="<?php echo htmlspecialchars($refDefault); ?>" placeholder="مثال: main یا v2.1.0 یا 9f3c1ab">
+                <input id="zip-ref" class="form-input" value="<?php echo htmlspecialchars($refDefault); ?>" placeholder="مثال: main یا v4.0.1 یا 9f3c1ab">
             </div>
         </div>
         <div class="form-group" style="margin-top:8px">
