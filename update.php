@@ -31,16 +31,27 @@ if (file_exists(__DIR__ . '/includes/ErrorHandler.php')) {
 session_start();
 $authorized = false;
 
+// 1) Admin session
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     $authorized = true;
+}
+// 2) Token fallback (?token=WEBHOOK_SECRET)
+if (!$authorized) {
+    $tokenParam = isset($_GET['token']) ? (string)$_GET['token'] : '';
+    if (!empty($tokenParam) && $configLoaded && defined('WEBHOOK_SECRET') && WEBHOOK_SECRET !== '') {
+        // Use hash_equals to prevent timing attacks
+        if (hash_equals(WEBHOOK_SECRET, $tokenParam)) {
+            $authorized = true;
+        }
+    }
 }
 
 if (!$authorized) {
     http_response_code(403);
     echo json_encode([
         'success' => false,
-        'error' => 'Forbidden: Admin login required',
-        'hint' => 'Please login to admin panel first at /admin/'
+        'error' => 'Forbidden: admin login or valid token required',
+        'hint' => 'Login at /admin/ or pass ?token=WEBHOOK_SECRET'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

@@ -3994,6 +3994,13 @@ function renderSettingsTab($db, $csrfToken) {
     </div>
     
     <!-- ابزارهای نگهداری و آپدیت -->
+    <?php
+        // Detect git capabilities for this section
+        $gitCap = [
+            'exec' => function_exists('exec') && is_callable('exec') && stripos(ini_get('disable_functions') ?? '', 'exec') === false,
+            'repo' => is_dir(dirname(__DIR__) . '/.git'),
+        ];
+    ?>
     <div class="card">
         <h3>
             <span class="material-icons">system_update_alt</span>
@@ -4011,7 +4018,7 @@ function renderSettingsTab($db, $csrfToken) {
                 </div>
             </div>
             <div>
-                <button type="button" class="btn" onclick="updateFromGit()">
+                <button type="button" class="btn" onclick="updateFromGit()" <?php echo (!$gitCap['exec'] || !$gitCap['repo']) ? 'disabled title="git یا exec در دسترس نیست (برای بروزرسانی از کارت ZIP پایین استفاده کنید)"' : ''; ?>>
                     <span class="material-icons">cloud_download</span>
                     آپدیت از GitHub
                 </button>
@@ -4021,9 +4028,35 @@ function renderSettingsTab($db, $csrfToken) {
         <div style="font-size: 0.85em; color: var(--text-secondary); margin-top: 8px;">
             نکته: برای دیپلوی خودکار با Webhook از فایل <code>deploy.php</code> استفاده کنید و مقدار <code>GITHUB_SECRET</code> را تنظیم نمایید.
         </div>
+        <?php if (!$gitCap['exec'] || !$gitCap['repo']): ?>
+            <div class="hint" style="margin-top:12px;">
+                <strong>راهنما:</strong>
+                <ul>
+                    <?php if (!$gitCap['exec']): ?><li>تابع <code>exec()</code> در این هاست غیرفعال است.</li><?php endif; ?>
+                    <?php if (!$gitCap['repo']): ?><li>این پوشه یک ریپوی git نیست (<code>.git</code> موجود نیست).</li><?php endif; ?>
+                    <li>برای بروزرسانی، از کارت «آپدیت مستقیم از GitHub (ZIP)» در پایین استفاده کنید.</li>
+                </ul>
+            </div>
+        <?php endif; ?>
     </div>
 
+    <?php
+        // Defaults for ZIP update (general Update button below)
+        $defaultOwnerRepo = (defined('GITHUB_OWNER') && defined('GITHUB_REPO') && GITHUB_OWNER && GITHUB_REPO)
+            ? (GITHUB_OWNER . '/' . GITHUB_REPO)
+            : '';
+        $zipCap = [
+            'zip' => class_exists('ZipArchive'),
+            'curl' => function_exists('curl_version'),
+            'allow_url_fopen' => ini_get('allow_url_fopen') ? true : false,
+        ];
+        $zipReady = $zipCap['zip'] && ($zipCap['curl'] || $zipCap['allow_url_fopen']);
+        $gitReady = $gitCap['exec'] && $gitCap['repo'];
+    ?>
     <script>
+        const DEF_OWNER_REPO = <?php echo json_encode($defaultOwnerRepo); ?>;
+        const CAP_ZIP = <?php echo $zipReady ? 'true' : 'false'; ?>;
+        const CAP_GIT = <?php echo $gitReady ? 'true' : 'false'; ?>;
         async function updateFromGit() {
             const branch = document.getElementById('git-branch').value.trim() || 'main';
             if (!confirm(`آیا مطمئن هستید که می‌خواهید از شاخه "${branch}" به‌روزرسانی کنید؟`)) return;
@@ -4316,7 +4349,19 @@ function renderSettingsTab($db, $csrfToken) {
             
             showLoading();
             
-            fetch('../update.php', {
+            // Prefer ZIP mode if configured and available; fallback to git if possible
+            let url = null;
+            if (CAP_ZIP && DEF_OWNER_REPO) {
+                url = `../update.php?source=zip&repo=${encodeURIComponent(DEF_OWNER_REPO)}&ref=main`;
+            } else if (CAP_GIT) {
+                url = `../update.php?branch=main`;
+            } else {
+                hideLoading();
+                alert('⚠️ امکان آپدیت خودکار در این سرور فعال نیست. لطفاً از کارت ZIP در تب تنظیمات استفاده کنید و OWNER/REPO را وارد نمایید.');
+                return;
+            }
+
+            fetch(url, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json'
