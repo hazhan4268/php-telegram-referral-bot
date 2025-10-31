@@ -69,3 +69,10 @@ date_default_timezone_set(TIMEZONE);
 // define('GITHUB_OWNER', 'your-github-user');
 // define('GITHUB_REPO', 'your-repo-name');
 // define('GITHUB_TOKEN', 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+
+// --- Multi-language adapters (اختیاری) ---
+// The project includes minimal adapter examples in /adapters for Node.js and Python.
+// These are optional webhook receivers you can run on cPanel or other hosts and
+// forward events to this PHP backend or reimplement business logic.
+// Node.js adapter: adapters/nodejs/server.js
+// Python adapter: adapters/python/app.py

@@ -1,0 +1,8 @@
+{
+  "name": "php-referral-bot-node-adapter",
+  "version": "0.0.1",
+  "description": "Minimal adapter for receiving webhooks in Node.js",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "express": "^4.18.2" }
+}

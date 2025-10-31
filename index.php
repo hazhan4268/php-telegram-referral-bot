@@ -44,6 +44,18 @@ function admin_parse_config_constants($file) {
 }
 
 $cfg = admin_parse_config_constants(__DIR__ . '/../config.php');
+// Diagnostic: write lightweight runtime info to admin_debug.log to help track 500 errors
+@file_put_contents(__DIR__ . '/../admin_debug.log', json_encode([
+    'time' => date('Y-m-d H:i:s'),
+    'php_version' => PHP_VERSION,
+    'cfg_parsed_keys' => array_keys($cfg),
+    'config_exists' => is_file(__DIR__ . '/../config.php'),
+    'includes' => [
+        'ErrorHandler' => is_file(__DIR__ . '/../includes/ErrorHandler.php'),
+        'Database' => is_file(__DIR__ . '/../includes/Database.php'),
+        'BotHelper' => is_file(__DIR__ . '/../includes/BotHelper.php')
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n", FILE_APPEND | LOCK_EX);
 if (empty($cfg)) {
     http_response_code(500);
     ?>
@@ -117,6 +129,10 @@ try {
     require_once __DIR__ . '/../includes/Database.php';
     require_once __DIR__ . '/../includes/BotHelper.php';
     $db = Database::getInstance();
+    // Initialize BotHelper safely after DB is available
+    if (class_exists('BotHelper')) {
+        BotHelper::initIfNeeded();
+    }
 } catch (Throwable $e) {
     if (function_exists('error_notify_admin')) {
         error_notify_admin('admin_boot_db', $e->getMessage(), ['file' => __FILE__]);
@@ -4864,6 +4880,16 @@ function renderSettingsTab($db, $csrfToken) {
         </div>
     </div>
 
+    <?php
+    // Detect server capabilities to avoid showing controls that will fail.
+    $capabilities = [
+        'zip' => class_exists('ZipArchive'),
+        'curl' => function_exists('curl_version'),
+        'allow_url_fopen' => ini_get('allow_url_fopen') ? true : false,
+        'exec' => function_exists('exec') && is_callable('exec') && stripos(ini_get('disable_functions') ?? '', 'exec') === false
+    ];
+    ?>
+
     <div class="card">
         <h3><span class="material-icons">system_update_alt</span> آپدیت مستقیم از GitHub (ZIP) - بدون نیاز به git</h3>
         <div class="two-col-grid">
@@ -4877,7 +4903,7 @@ function renderSettingsTab($db, $csrfToken) {
             </div>
         </div>
         <div class="form-group" style="margin-top:8px">
-            <button id="zip-update-btn" class="btn">
+            <button id="zip-update-btn" class="btn" <?php echo (!$capabilities['zip'] || (!$capabilities['curl'] && !$capabilities['allow_url_fopen'])) ? 'disabled title="ZipArchive یا دسترسی دانلود غیر فعال است"' : ''; ?>>
                 <span class="material-icons">cloud_download</span>
                 آپدیت مستقیم (ZIP)
             </button>
@@ -4886,6 +4912,21 @@ function renderSettingsTab($db, $csrfToken) {
         <div class="muted" style="margin-top:8px">
             نکته: برای ریپوی private باید <code>GITHUB_TOKEN</code> را در <code>config.php</code> تنظیم کنید.
         </div>
+
+        <?php if (!$capabilities['zip'] || (!$capabilities['curl'] && !$capabilities['allow_url_fopen'])): ?>
+            <div class="hint" style="margin-top:12px;">
+                <strong>هشدار:</strong>
+                <ul>
+                    <?php if (!$capabilities['zip']): ?>
+                        <li>افزونه <code>ZipArchive</code> فعال نیست. استخراج ZIP ممکن نیست.</li>
+                    <?php endif; ?>
+                    <?php if (!$capabilities['curl'] && !$capabilities['allow_url_fopen']): ?>
+                        <li>دستگاه قادر به دانلود از اینترنت نیست (cURL غیرفعال و <code>allow_url_fopen</code> خاموش).</li>
+                    <?php endif; ?>
+                </ul>
+                لطفاً این موارد را در تنظیمات PHP یا با پشتیبان هاست خود بررسی کنید.
+            </div>
+        <?php endif; ?>
     </div>
 
     <script>

@@ -11,6 +11,18 @@ class BotHelper {
     public static function init() {
         self::$db = Database::getInstance();
     }
+
+    // Safe initializer that does nothing if already initialized
+    public static function initIfNeeded() {
+        if (self::$db === null) {
+            try {
+                self::init();
+            } catch (Throwable $e) {
+                // Fail silently; callers should handle DB availability explicitly
+                error_log('BotHelper init failed: ' . $e->getMessage());
+            }
+        }
+    }
     
     /**
      * ارسال درخواست به API تلگرام
@@ -356,5 +368,4 @@ class BotHelper {
     }
 }
 
-// مقداردهی اولیه
-BotHelper::init();
+// Note: explicit initialization is recommended after Database is available

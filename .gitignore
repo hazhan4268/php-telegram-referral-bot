@@ -91,3 +91,7 @@ phpunit.xml
 
 # Local build metadata
 BUILD
+backups/
+admin_debug.log
+webhook_debug.log
+config.php

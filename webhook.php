@@ -74,6 +74,10 @@ try {
     require_once __DIR__ . '/includes/Database.php';
     require_once __DIR__ . '/includes/BotHelper.php';
     $db = Database::getInstance();
+    // Initialize BotHelper safely after DB is available
+    if (class_exists('BotHelper')) {
+        BotHelper::initIfNeeded();
+    }
 } catch (Exception $e) {
     error_log("Webhook initialization error: " . $e->getMessage());
     if (function_exists('error_notify_admin')) {

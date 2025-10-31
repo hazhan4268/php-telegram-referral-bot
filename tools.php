@@ -173,12 +173,17 @@ switch ($action) {
                 'pdo_mysql' => extension_loaded('pdo_mysql'),
                 'curl' => extension_loaded('curl'),
                 'json' => extension_loaded('json'),
+                'ziparchive' => class_exists('ZipArchive'),
             ],
             'config' => [
                 'exists' => file_exists(__DIR__ . '/config.php'),
                 'parsed' => !empty($cfg),
             ],
             'db' => ['ok' => false, 'error' => null],
+            'git' => [
+                'exec_available' => function_exists('exec'),
+                'repo' => is_dir(__DIR__ . '/.git'),
+            ],
             'write' => ['deploy_log' => null],
             'db_schema' => ['checked' => false, 'missing_tables' => [], 'problems' => []],
             'php_ini' => [
@@ -238,8 +243,11 @@ switch ($action) {
         $hints = [];
         if (!$result['php']['ok']) $hints[] = 'PHP 8.0+ required';
         if (!$result['extensions']['pdo_mysql']) $hints[] = 'pdo_mysql must be enabled';
+        if (!$result['extensions']['ziparchive']) $hints[] = 'ZipArchive extension is recommended for ZIP updates';
         if (!$result['config']['exists']) $hints[] = 'config.php not found (run install.php)';
         if (!$result['db']['ok']) $hints[] = 'DB connection failed: check credentials';
+        if (!$result['git']['exec_available']) $hints[] = 'exec() disabled; git-based update will not work';
+        if (!$result['git']['repo']) $hints[] = 'Not a git repository; prefer ZIP updates or initialize git';
         if (!empty($result['db_schema']['missing_tables'])) {
             $hints[] = 'Missing tables: ' . implode(', ', $result['db_schema']['missing_tables']) . ' — initialize schema from admin panel';
         }
