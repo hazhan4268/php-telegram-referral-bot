@@ -4,6 +4,7 @@ class ToolsHealth {
     public static function handle() {
         header('Content-Type: application/json; charset=utf-8');
         $cfg = ToolsCommon::parseConfig();
+        $projectRoot = ToolsCommon::projectRoot();
         $result = [
             'time' => date('Y-m-d H:i:s'),
             'php' => [ 'version' => PHP_VERSION, 'ok' => version_compare(PHP_VERSION, '8.0.0', '>=') ],
@@ -14,9 +15,9 @@ class ToolsHealth {
                 'json' => extension_loaded('json'),
                 'ziparchive' => class_exists('ZipArchive'),
             ],
-            'config' => [ 'exists' => file_exists(__DIR__ . '/config.php'), 'parsed' => !empty($cfg) ],
+            'config' => [ 'exists' => file_exists($projectRoot . '/config.php'), 'parsed' => !empty($cfg) ],
             'db' => ['ok'=>false,'error'=>null],
-            'git' => ['exec_available'=>function_exists('exec'), 'repo'=>is_dir(__DIR__ . '/.git')],
+            'git' => ['exec_available'=>function_exists('exec'), 'repo'=>is_dir($projectRoot . '/.git')],
             'write' => ['deploy_log'=>null],
             'db_schema' => ['checked'=>false,'missing_tables'=>[],'problems'=>[]],
             'php_ini' => [
@@ -30,7 +31,7 @@ class ToolsHealth {
         if (!empty($cfg)) {
             $keys = ['DB_HOST','DB_NAME','DB_USER','DB_PASS','DB_CHARSET'];
             $cfgAll = $cfg;
-            foreach ($keys as $k) { if (!isset($cfgAll[$k])) { $code = @file_get_contents(__DIR__ . '/config.php'); if ($code!==false) { foreach ($keys as $kk) { if (preg_match("/define\(\s*'".preg_quote($kk,'/')."'\s*,\s*(?:'([^']*)'|\"([^\"]*)\"|([a-zA-Z0-9_:\\/.+-]+))\s*\)\s*;/", $code, $m)) { $val=$m[1]!==''?$m[1]:( $m[2]!==''?$m[2]:$m[3]); $cfgAll[$kk]=$val; } } } break; } }
+            foreach ($keys as $k) { if (!isset($cfgAll[$k])) { $code = @file_get_contents($projectRoot . '/config.php'); if ($code!==false) { foreach ($keys as $kk) { if (preg_match("/define\(\s*'".preg_quote($kk,'/')."'\s*,\s*(?:'([^']*)'|\"([^\"]*)\"|([a-zA-Z0-9_:\\/.+-]+))\s*\)\s*;/", $code, $m)) { $val=$m[1]!==''?$m[1]:( $m[2]!==''?$m[2]:$m[3]); $cfgAll[$kk]=$val; } } } break; } }
             if (!empty($cfgAll['DB_HOST']) && !empty($cfgAll['DB_NAME'])) {
                 try {
                     $dsn = "mysql:host={$cfgAll['DB_HOST']};dbname={$cfgAll['DB_NAME']};charset=" . ($cfgAll['DB_CHARSET'] ?? 'utf8mb4');
@@ -44,7 +45,7 @@ class ToolsHealth {
             } else { $result['db']['error'] = 'DB constants missing in config'; }
         }
         // Write test
-        $logFile = __DIR__ . '/deploy.log';
+        $logFile = $projectRoot . '/deploy.log';
         $test = @file_put_contents($logFile, '[' . date('H:i:s') . "] health\n", FILE_APPEND);
         $result['write']['deploy_log'] = $test !== false;
         // Hints

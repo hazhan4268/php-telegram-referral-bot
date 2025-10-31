@@ -1,7 +1,35 @@
 <?php
 class ToolsCommon {
+    protected static $projectRoot = null;
+
+    public static function projectRoot() {
+        if (self::$projectRoot !== null) {
+            return self::$projectRoot;
+        }
+        $candidates = [];
+        $dir = __DIR__;
+        for ($i = 0; $i < 5; $i++) {
+            if (!in_array($dir, $candidates, true)) {
+                $candidates[] = $dir;
+            }
+            $parent = dirname($dir);
+            if ($parent === $dir) {
+                break;
+            }
+            $dir = $parent;
+        }
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate . '/config.php')) {
+                self::$projectRoot = $candidate;
+                return self::$projectRoot;
+            }
+        }
+        // Fall back to the original directory when config.php is missing.
+        self::$projectRoot = __DIR__;
+        return self::$projectRoot;
+    }
     public static function parseConfig() {
-        $file = __DIR__ . '/config.php';
+        $file = self::projectRoot() . '/config.php';
         $out = [];
         if (!is_file($file)) return $out;
         $code = @file_get_contents($file);
